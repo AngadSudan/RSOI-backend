@@ -13,7 +13,7 @@ const app = express();
 const port = process.env.PORT || 8000;
 const limiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 10 minutes
-    limit: 75,
+    limit: 200,
     message:
         'Too many requests from this IP, please try again after 10 minutes',
 });

@@ -18,11 +18,28 @@ const uploadMedia = async (file) => {
     }
 };
 
-const deleteMedia = async (publicId) => {
+const deleteMedia = async (secureUrl) => {
     try {
-        return await Cloudinary.uploader.destroy(publicId);
+        if (!secureUrl) {
+            throw new Error('Secure URL is required.');
+        }
+
+        const urlParts = secureUrl.split('/');
+        const versionIndex = urlParts.findIndex((part) => part.startsWith('v'));
+        if (versionIndex === -1 || versionIndex + 1 >= urlParts.length) {
+            throw new Error('Invalid Cloudinary URL format.');
+        }
+
+        let publicId = urlParts.slice(versionIndex + 1).join('/');
+        publicId = publicId.substring(0, publicId.lastIndexOf('.'));
+        console.log(`Deleting media with public ID: ${publicId}`);
+
+        const result = await Cloudinary.uploader.destroy(publicId);
+        console.log('Delete response:', result);
+        return result;
     } catch (error) {
-        console.log('error in deleting the media', error);
+        console.error('Error in deleting the media:', error);
+        return { success: false, error: error.message };
     }
 };
 

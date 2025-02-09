@@ -11,6 +11,7 @@
 //     role:['superAdmin','eventAdmin','membershipAdmin','user' ],
 //     // isMember:false
 // }
+
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';

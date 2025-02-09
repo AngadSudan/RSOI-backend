@@ -8,25 +8,25 @@ import mongoose from 'mongoose';
 // }
 const reviewSchema = new mongoose.Schema(
     {
-        writtenby: {
+        creator: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: true,
+            required: [true, 'Creator cannot be empty'],
         },
         event: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Event',
-            required: true,
+            required: [true, 'Event cannot be empty'],
         },
         rating: {
             type: Number,
-            required: true,
+            required: [true, 'Rating cannot be empty'],
             min: 1,
             max: 5,
         },
         review: {
             type: String,
-            required: true,
+            required: [true, 'Review cannot be empty'],
         },
     },
     {
