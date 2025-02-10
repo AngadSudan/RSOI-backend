@@ -205,6 +205,134 @@ const deleteReview = async (req, res) => {
             .json(new ApiError(500, 'Internal server error', [error.message]));
     }
 };
+const getReviewByUser = async (req, res) => {
+    const { id: event } = req.params;
+    const user = req.user._id;
+    if (!event) {
+        return res.status(200).json(new ApiError(400, 'Event id is required'));
+    }
+    try {
+        const dbEvent = await Event.findById(event);
+        if (!dbEvent) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Event not found in the database'));
+        }
+
+        const dbUser = await User.findById(user);
+        if (!dbUser) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'User not found in the database'));
+        }
+
+        const dbReview = await Review.find({
+            $and: [{ creator: user }, { event: dbEvent._id }],
+        });
+
+        if (!dbReview) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Review not found in the database'));
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, dbReview, 'Review found successfully'));
+    } catch (error) {
+        console.log(error);
+        return res
+            .status(500)
+            .json(new ApiError(500, 'Internal server error', [error.message]));
+    }
+};
+const getReviewByEvent = async (req, res) => {
+    const { id: event } = req.params;
+
+    if (!event) {
+        return res.status(400).json(new ApiError(400, 'Event id is required'));
+    }
+
+    try {
+        const dbEvent = await event.findById(event);
+        if (!dbEvent) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Event not found in the database'));
+        }
+
+        const dbReview = await Review.find({ event: dbEvent._id });
+
+        if (!dbReview) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Review not found in the database'));
+        }
+
+        const dbReviews = await Review.find({ event: dbEvent._id }).populate(
+            'creator',
+            'name email'
+        );
+
+        if (!dbReviews) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Review not found in the database'));
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, dbReviews, 'Review found successfully'));
+    } catch (error) {
+        console.log(error);
+        return res
+            .status(500)
+            .json(new ApiError(500, 'Internal server error', [error.message]));
+    }
+};
+const getEventReviewByRating = async (req, res) => {
+    const { id: event } = req.params;
+
+    if (!event) {
+        return res.status(400).json(new ApiError(400, 'Event id is required'));
+    }
+
+    try {
+        const dbEvent = await event.findById(event);
+        if (!dbEvent) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Event not found in the database'));
+        }
+
+        const dbReview = await Review.find({ event: dbEvent._id });
+
+        if (!dbReview) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Review not found in the database'));
+        }
+
+        const dbReviews = await Review.find({
+            $and: [{ event: dbEvent._id }, { rating: { $gte: rating } }],
+        }).populate('creator', 'name email');
+
+        if (!dbReviews) {
+            return res
+                .status(404)
+                .json(new ApiError(404, 'Review not found in the database'));
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, dbReviews, 'Review found successfully'));
+    } catch (error) {
+        console.log(error);
+        return res
+            .status(500)
+            .json(new ApiError(500, 'Internal server error', [error.message]));
+    }
+};
 
 export { addReview, updateReview, deleteReview };
 //TODO: getReviewByUser, getReviewByProduct

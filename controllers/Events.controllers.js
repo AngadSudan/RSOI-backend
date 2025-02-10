@@ -558,7 +558,39 @@ const changeEventStatus = async (req, res) => {
             );
     }
 };
+const getEventById = async (req, res) => {
+    const { id: event } = req.params;
 
+    if (!event) {
+        return res.status(400).json(new ApiError(400, 'Event id is required'));
+    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const dbEvent = await Event.findById(event).session(session);
+        if (!dbEvent) {
+            return res
+                .status(400)
+                .json(new ApiError(400, 'No such event found'));
+        }
+        await session.commitTransaction();
+        session.endSession();
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, 'Event found', dbEvent));
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        return res
+            .status(500)
+            .json(
+                new ApiError(500, 'Error in fetching event', [error.message])
+            );
+    }
+};
 export {
     createEvent,
     updateEvent,
@@ -566,6 +598,7 @@ export {
     getEventByMode,
     changeEventStatus,
     getEventByStatus,
+    getEventById,
 };
 
 //TODO: Get event by id

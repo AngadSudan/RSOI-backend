@@ -257,6 +257,227 @@ const assignUserRole = async (req, res) => {
         res.status(500).json(new ApiError(500, 'Internal server error', error));
     }
 };
-export { registerUser, assignUserRole, loginUser, updateUser };
+const getUserByRole = async (req, res) => {
+    const user = req.used._id;
+    const { role } = req.body;
 
-//TODO: getUserByRole, getUserByStatus, changeUserStatus, deleteUser
+    if (!user) {
+        return res.status(401).json(new ApiError(401, 'User not found'));
+    }
+    if (!role) {
+        return res.status(400).json(new ApiError(400, 'Role is required'));
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const dbUser = await User.findById(user).session(session);
+
+        if (!dbUser) {
+            return res.status(404).json(new ApiError(404, 'User not found'));
+        }
+
+        if (dbUser.role !== 'superAdmin') {
+            return res
+                .status(403)
+                .json(
+                    new ApiError(403, 'Only super admins can get users by role')
+                );
+        }
+
+        const fetchedUsers = await User.find({
+            role: {
+                $in: [...role],
+            },
+        });
+
+        if (!fetchedUsers) {
+            return res.status(404).json(new ApiError(404, 'No users found'));
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, 'Users fetched successfully', fetchedUsers)
+            );
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        return res
+            .status(500)
+            .json(new ApiError(500, 'Internal server error', error));
+    }
+};
+const getUserByStatus = async (req, res) => {
+    const user = req.used._id;
+    const { status } = req.body;
+
+    if (!user) {
+        return res.status(401).json(new ApiError(401, 'User not found'));
+    }
+    if (!status) {
+        return res.status(400).json(new ApiError(400, 'Status is required'));
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const dbUser = await User.findById(user).session(session);
+
+        if (!dbUser) {
+            return res.status(404).json(new ApiError(404, 'User not found'));
+        }
+
+        if (dbUser.role !== 'superAdmin') {
+            return res
+                .status(403)
+                .json(
+                    new ApiError(403, 'Only super admins can get users by role')
+                );
+        }
+
+        const fetchedUsers = await User.find({
+            role: {
+                $in: [...status],
+            },
+        });
+
+        if (!fetchedUsers) {
+            return res.status(404).json(new ApiError(404, 'No users found'));
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, 'Users fetched successfully', fetchedUsers)
+            );
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        return res
+            .status(500)
+            .json(new ApiError(500, 'Internal server error', error));
+    }
+};
+const changeUserStatus = async (req, res) => {
+    const user = req.user._id;
+    const { id: userId } = req.params;
+    const { status } = req.body;
+
+    if (!userId) {
+        return res.status(400).json(new ApiError(400, 'User ID is required'));
+    }
+    if (!status) {
+        return res.status(400).json(new ApiError(400, 'Status is required'));
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const adminUser = await User.findById(user).session(session);
+        if (!adminUser) {
+            return res.status(404).json(new ApiError(404, 'User not found'));
+        }
+        if (adminUser.role !== 'superAdmin') {
+            return res
+                .status(403)
+                .json(
+                    new ApiError(
+                        403,
+                        'only super admins can change user status'
+                    )
+                );
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { status: status },
+            { new: true, session }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json(new ApiError(404, 'User not found'));
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    'User status updated successfully',
+                    updatedUser
+                )
+            );
+    } catch (error) {
+        session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        res.status(500).json(new ApiError(500, 'Internal server error', error));
+    }
+};
+const deleteUser = async (req, res) => {
+    const user = req.user._id;
+    const { id: userId } = req.params;
+
+    if (!userId) {
+        return res.status(400).json(new ApiError(400, 'User ID is required'));
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const adminUser = await User.findById(user).session(session);
+        if (!adminUser) {
+            return res.status(404).json(new ApiError(404, 'User not found'));
+        }
+        if (adminUser.role !== 'superAdmin') {
+            return res
+                .status(403)
+                .json(new ApiError(403, 'only super admins can delete users'));
+        }
+
+        const dbUser = await User.findByIdAndDelete(userId).session(session);
+        const deletedUser = await User.findByIdAndDelete(dbUser._id).session(
+            session
+        );
+
+        if (!deletedUser) {
+            return res.status(404).json(new ApiError(404, 'User not found'));
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, 'User deleted successfully'));
+    } catch (error) {
+        session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        res.status(500).json(new ApiError(500, 'Internal server error', error));
+    }
+};
+export {
+    registerUser,
+    assignUserRole,
+    loginUser,
+    updateUser,
+    getUserByRole,
+    getUserByStatus,
+    changeUserStatus,
+    deleteUser,
+};

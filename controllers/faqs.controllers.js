@@ -2,6 +2,7 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import Faq from '../models/faqs.models.js';
 import User from '../models/user.models.js';
+import mongoose from 'mongoose';
 const createFaq = async (req, res) => {
     const user = req.user._id;
     const { question, answer, status } = req.body;
@@ -168,6 +169,42 @@ const getAllFaqs = async (req, res) => {
             .status(500)
             .json(
                 new ApiError(500, 'couldnot fetch the faqs', [error.message])
+            );
+    }
+};
+const getFaqById = async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json(new ApiError(400, 'missing id'));
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const fetchedFaq = await Faq.findById(id).session(session);
+        if (!fetchedFaq) {
+            await session.abortTransaction();
+            session.endSession();
+            return res
+                .status(401)
+                .json(new ApiError(401, 'could not fetch the faq'));
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+        return res
+            .status(200)
+            .json(new ApiResponse(200, fetchedFaq, 'FAQ fetched successfully'));
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.log(error);
+        return res
+            .status(500)
+            .json(
+                new ApiError(500, 'error in fetching the faq', [error.message])
             );
     }
 };
