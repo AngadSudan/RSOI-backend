@@ -14,13 +14,14 @@ const verifyJWT = async (req, res, next) => {
                 new ApiError(401, 'user is missing tokens, please login again')
             );
     }
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
-
-    const user = await User.findById(decodedToken?._id).select(
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decodedToken?.id).select(
         '-password -refreshToken'
     );
-
-    if (!user) return res.status(401).json(new ApiError(401, 'Unauthorized'));
+    if (!user)
+        return res
+            .status(401)
+            .json(new ApiError(401, 'couldnot fetch the user from the token'));
 
     req.user = user;
 

@@ -1,8 +1,8 @@
 import User from '../models/user.models.js';
-import Review from '../models/review.models';
+import Review from '../models/review.models.js';
 import Event from '../models/events.models.js';
-import ApiError from '../utils/ApiError.js';
-import ApiResponse from '../utils/ApiResponse.js';
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 
 const addReview = async (req, res) => {
     const user = req.user._id;

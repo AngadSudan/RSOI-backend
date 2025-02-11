@@ -2,14 +2,14 @@ import { ApiError, ApiResponse } from '../utils/index.js';
 import User from '../models/user.models.js';
 import mongoose from 'mongoose';
 const getTokens = async (user) => {
-    const accessToken = await user.generateToken();
+    const accessToken = await user.generateAccessToken();
     const refreshToken = await user.generateRefreshToken();
     return { accessToken, refreshToken };
 };
 const registerUser = async (req, res) => {
     const {
         firstName,
-        LastName,
+        lastName,
         email,
         phoneNumber,
         password,
@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
             .status(400)
             .json(new ApiError(400, 'First name is required'));
     }
-    if (!LastName) {
+    if (!lastName) {
         return res.status(400).json(new ApiError(400, 'Last name is required'));
     }
     if (!email) {
@@ -49,34 +49,29 @@ const registerUser = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'Country is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         //check for existing user
         const existingUser = await User.findOne({
             $or: [{ email: email }, { phoneNumber: phoneNumber }],
-        }).session(session);
+        });
 
         if (existingUser) {
             return res
                 .status(400)
                 .json(new ApiError(400, 'User already exists'));
         }
-        const createdUser = await User.create(
-            {
-                firstName,
-                LastName,
-                email,
-                phoneNumber,
-                password,
-                usertype,
-                address,
-                country,
-                role,
-                isMember,
-            },
-            { session: session }
-        );
+        const createdUser = await User.create({
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            password,
+            usertype,
+            address,
+            country,
+            role,
+            isMember,
+        });
 
         if (!createdUser) {
             return res
@@ -84,16 +79,10 @@ const registerUser = async (req, res) => {
                 .json(new ApiError(400, 'User registration failed'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
-
         return res
             .status(201)
             .json(new ApiResponse(201, 'User created', createdUser));
     } catch (error) {
-        session.abortTransaction();
-        session.endSession();
-
         console.log(error);
         res.status(500).json(
             new ApiError(500, error.message || 'Internal server error', [
@@ -113,13 +102,11 @@ const loginUser = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'Password is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         //check if email is present
         const dbUser = await User.findOne({
             $or: [{ email: email }, { phoneNumber: phoneNumber }],
-        }).session(session);
+        });
 
         if (!dbUser) {
             return res.status(400).json(new ApiError(400, 'User not found'));
@@ -139,35 +126,36 @@ const loginUser = async (req, res) => {
             {
                 refreshToken: refreshToken,
             },
-            { session, new: true }
-        );
+            { new: true }
+        ).select('-password -refreshToken');
 
         if (!updatedUser) {
             return res.status(400).json(new ApiError(400, 'Login failed'));
         }
-        await session.commitTransaction();
-        session.endSession();
 
         const options = {
             httpOnly: true,
             sameSite: true,
         };
+
         return res
             .status(200)
             .cookie('accessToken', accessToken, options)
             .json(
                 new ApiResponse(200, 'Login successful', {
                     accessToken,
-                    user: updateUser,
+                    user: updatedUser,
                 })
             );
     } catch (error) {
-        session.abortTransaction();
-        session.endSession();
         console.log(error);
-        res.status(500).json(new ApiError(500, 'Internal server error', error));
+        res.status(500).json(
+            new ApiError(500, 'Internal server error', [error.message])
+        );
     }
 };
+
+//TODO:FIX UPDATED USER
 const updateUser = async (req, res) => {
     const { id: userId } = req.params;
     const updateData = req.body;
@@ -176,20 +164,14 @@ const updateUser = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'User ID is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
             new: true,
-            session,
         });
 
         if (!updatedUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
-
-        await session.commitTransaction();
-        session.endSession();
 
         return res
             .status(200)
@@ -197,8 +179,6 @@ const updateUser = async (req, res) => {
                 new ApiResponse(200, 'User updated successfully', updatedUser)
             );
     } catch (error) {
-        session.abortTransaction();
-        session.endSession();
         console.log(error);
         res.status(500).json(new ApiError(500, 'Internal server error', error));
     }
@@ -213,10 +193,8 @@ const assignUserRole = async (req, res) => {
     if (!role) {
         return res.status(400).json(new ApiError(400, 'Role is required'));
     }
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-        const adminUser = await User.findById(user).session(session);
+        const adminUser = await User.findById(user);
         if (!adminUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
@@ -231,15 +209,12 @@ const assignUserRole = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { role: role },
-            { new: true, session }
+            { new: true }
         );
 
         if (!updatedUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
-
-        await session.commitTransaction();
-        session.endSession();
 
         return res
             .status(200)
@@ -251,8 +226,6 @@ const assignUserRole = async (req, res) => {
                 )
             );
     } catch (error) {
-        session.abortTransaction();
-        session.endSession();
         console.log(error);
         res.status(500).json(new ApiError(500, 'Internal server error', error));
     }
@@ -268,11 +241,8 @@ const getUserByRole = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'Role is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const dbUser = await User.findById(user).session(session);
+        const dbUser = await User.findById(user);
 
         if (!dbUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
@@ -296,17 +266,12 @@ const getUserByRole = async (req, res) => {
             return res.status(404).json(new ApiError(404, 'No users found'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
-
         return res
             .status(200)
             .json(
                 new ApiResponse(200, 'Users fetched successfully', fetchedUsers)
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)
@@ -324,11 +289,8 @@ const getUserByStatus = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'Status is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const dbUser = await User.findById(user).session(session);
+        const dbUser = await User.findById(user);
 
         if (!dbUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
@@ -352,17 +314,12 @@ const getUserByStatus = async (req, res) => {
             return res.status(404).json(new ApiError(404, 'No users found'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
-
         return res
             .status(200)
             .json(
                 new ApiResponse(200, 'Users fetched successfully', fetchedUsers)
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)
@@ -381,10 +338,8 @@ const changeUserStatus = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'Status is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-        const adminUser = await User.findById(user).session(session);
+        const adminUser = await User.findById(user);
         if (!adminUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
@@ -402,15 +357,12 @@ const changeUserStatus = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { status: status },
-            { new: true, session }
+            { new: true }
         );
 
         if (!updatedUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
-
-        await session.commitTransaction();
-        session.endSession();
 
         return res
             .status(200)
@@ -422,8 +374,6 @@ const changeUserStatus = async (req, res) => {
                 )
             );
     } catch (error) {
-        session.abortTransaction();
-        session.endSession();
         console.log(error);
         res.status(500).json(new ApiError(500, 'Internal server error', error));
     }
@@ -436,10 +386,8 @@ const deleteUser = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'User ID is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-        const adminUser = await User.findById(user).session(session);
+        const adminUser = await User.findById(user);
         if (!adminUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
@@ -449,24 +397,17 @@ const deleteUser = async (req, res) => {
                 .json(new ApiError(403, 'only super admins can delete users'));
         }
 
-        const dbUser = await User.findByIdAndDelete(userId).session(session);
-        const deletedUser = await User.findByIdAndDelete(dbUser._id).session(
-            session
-        );
+        const dbUser = await User.findByIdAndDelete(userId);
+        const deletedUser = await User.findByIdAndDelete(dbUser._id);
 
         if (!deletedUser) {
             return res.status(404).json(new ApiError(404, 'User not found'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
-
         return res
             .status(200)
             .json(new ApiResponse(200, 'User deleted successfully'));
     } catch (error) {
-        session.abortTransaction();
-        session.endSession();
         console.log(error);
         res.status(500).json(new ApiError(500, 'Internal server error', error));
     }

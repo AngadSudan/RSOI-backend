@@ -88,13 +88,13 @@ userSchema.methods.isPasswordCorrect = function (password) {
 };
 
 userSchema.methods.generateRefreshToken = function () {
-    return jwt.sign({ id: this._id, role: this.role }, process.env.SECRET, {
+    return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
         expiresIn: '1h',
     });
 };
 
 userSchema.methods.generateAccessToken = function () {
-    return jwt.sign({ id: this._id, role: this.role }, process.env.SECRET, {
+    return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
         expiresIn: '15m',
     });
 };

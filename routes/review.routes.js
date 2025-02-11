@@ -3,14 +3,14 @@ import { Router } from 'express';
 const reviewRouter = Router();
 
 import {
-    createReview,
     updateReview,
     deleteReview,
+    addReview,
     // getReviewByUser,
     // getReviewByProduct,
 } from '../controllers/review.controllers.js';
 
-reviewRouter.post('/create/:id', createReview);
+reviewRouter.post('/create/:id', addReview);
 reviewRouter.put('/update/:id', updateReview);
 reviewRouter.delete('/delete/:id', deleteReview);
 

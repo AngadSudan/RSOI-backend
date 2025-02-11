@@ -1,13 +1,13 @@
 import { uploadMedia, deleteMedia } from '../utils/Cloudinary.js';
 import User from '../models/user.models.js';
-import Event from '../models/event.models.js';
+import Event from '../models/events.models.js';
 import mongoose from 'mongoose';
 import { ApiError, ApiResponse } from '../utils/index.js';
 const createEvent = async (req, res) => {
     const { name, description, timeline, mode, location, eventLink } = req.body;
     const user = req.user._id;
 
-    const imagePath = req.file.path;
+    const imagePath = req.file?.path;
     if (!user) {
         return res.status(400).json(new ApiError(400, 'User is required'));
     }
@@ -65,13 +65,11 @@ const createEvent = async (req, res) => {
             .json(new ApiError(400, 'Please specify the event link'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const dbUser = await User.findById(user)
-            .select('-refreshToken -password')
-            .session(session);
+        const dbUser = await User.findById(user).select(
+            '-refreshToken -password'
+        );
+
         if (!dbUser)
             return res
                 .status(400)
@@ -80,7 +78,7 @@ const createEvent = async (req, res) => {
                 );
         //authorize user
 
-        if (dbUser.role !== 'eventAdmin' || dbUser.role !== 'superAdmin') {
+        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
             return res
                 .status(400)
                 .json(
@@ -104,7 +102,7 @@ const createEvent = async (req, res) => {
         }
         //check if the event already exists
 
-        const eventExists = await Event.findOne({ name }).session(session);
+        const eventExists = await Event.findOne({ name });
         if (eventExists) {
             return res
                 .status(400)
@@ -116,18 +114,17 @@ const createEvent = async (req, res) => {
                 );
         }
 
-        const createdEvent = await Event.create(
-            {
-                name,
-                description,
-                timeline,
-                location,
-                mode,
-                eventLink,
-                imageLink,
-            },
-            { session: session }
-        );
+        const createdEvent = await Event.create({
+            name,
+            description,
+            timeline,
+            location,
+            mode,
+            eventLink,
+            imageLink:
+                imageLink ||
+                'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.freepik.com%2Ffree-vector%2Fabstract-background-with-a-watercolor-splash_1055781.htm&psig=AOvVaw3',
+        });
 
         if (!createdEvent) {
             return res
@@ -135,16 +132,12 @@ const createEvent = async (req, res) => {
                 .json(new ApiError(400, 'Error creating event'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
         return res
             .status(201)
             .json(
                 new ApiResponse(201, 'Event created successfully', createdEvent)
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log('event');
         return res
             .status(500)
@@ -167,7 +160,7 @@ const updateEvent = async (req, res) => {
     } = req.body;
     const user = req.user._id;
 
-    const imagePath = req.file.path;
+    const imagePath = req.file?.path;
     if (!user) {
         return res.status(400).json(new ApiError(400, 'User is required'));
     }
@@ -181,13 +174,12 @@ const updateEvent = async (req, res) => {
                 )
             );
     }
-    const session = await mongoose.startSession();
-    session.startTransaction();
 
     try {
-        const dbUser = await User.findById(user)
-            .select('-refreshToken -password')
-            .session(session);
+        const dbUser = await User.findById(user).select(
+            '-refreshToken -password'
+        );
+
         if (!dbUser)
             return res
                 .status(400)
@@ -196,7 +188,7 @@ const updateEvent = async (req, res) => {
                 );
         //authorize user
 
-        if (dbUser.role !== 'eventAdmin' || dbUser.role !== 'superAdmin') {
+        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
             return res
                 .status(400)
                 .json(
@@ -208,7 +200,7 @@ const updateEvent = async (req, res) => {
         }
 
         //check if the event already exists
-        const eventExists = await Event.findById(event).session(session);
+        const eventExists = await Event.findById(event);
 
         if (!eventExists) {
             return res
@@ -260,7 +252,7 @@ const updateEvent = async (req, res) => {
                 imageLink,
                 isPublic,
             },
-            { new: true, session: session }
+            { new: true }
         );
 
         if (!updatedEvent) {
@@ -269,16 +261,12 @@ const updateEvent = async (req, res) => {
                 .json(new ApiError(400, 'Error creating event'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
         return res
             .status(201)
             .json(
                 new ApiResponse(201, 'Event created successfully', updatedEvent)
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log('event');
         return res
             .status(500)
@@ -305,13 +293,10 @@ const deleteEvent = async (req, res) => {
             );
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const dbUser = await User.findById(user)
-            .select('-refreshToken -password')
-            .session(session);
+        const dbUser = await User.findById(user).select(
+            '-refreshToken -password'
+        );
         if (!dbUser)
             return res
                 .status(400)
@@ -320,7 +305,7 @@ const deleteEvent = async (req, res) => {
                 );
         //authorize user
 
-        if (dbUser.role !== 'eventAdmin' || dbUser.role !== 'superAdmin') {
+        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
             return res
                 .status(400)
                 .json(
@@ -332,7 +317,7 @@ const deleteEvent = async (req, res) => {
         }
 
         //check if the event already exists
-        const eventExists = await Event.findById(event).session(session);
+        const eventExists = await Event.findById(event);
 
         if (!eventExists) {
             return res
@@ -350,7 +335,7 @@ const deleteEvent = async (req, res) => {
             {
                 isPublic: false,
             },
-            { session, new: true }
+            { new: true }
         );
 
         if (!deleteEvent) {
@@ -359,17 +344,12 @@ const deleteEvent = async (req, res) => {
                 .json(new ApiError(400, 'Error deleting event'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
-
         return res
             .status(201)
             .json(
                 new ApiResponse(201, 'Event deleted successfully', deletedEvent)
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)
@@ -379,10 +359,7 @@ const deleteEvent = async (req, res) => {
     }
 };
 const getEventByMode = async (req, res) => {
-    const session = await mongoose.startSession();
     const { mode } = req.body;
-    session.startTransaction();
-
     if (!mode) {
         mode = ['online', 'offline', 'hybrid'];
     }
@@ -391,7 +368,7 @@ const getEventByMode = async (req, res) => {
             mode: {
                 $in: [...mode],
             },
-        }).session(session);
+        });
 
         if (!dbEvents) {
             return res
@@ -399,14 +376,10 @@ const getEventByMode = async (req, res) => {
                 .json(new ApiError(400, 'No event in these modes found'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
         return res
             .status(200)
             .json(new ApiResponse(200, 'Offline events found', dbEvents));
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)
@@ -417,8 +390,6 @@ const getEventByMode = async (req, res) => {
 };
 const getEventByStatus = async (req, res) => {
     const { status } = req.body;
-    const session = await mongoose.startSession();
-    session.startTransaction();
 
     if (!status) {
         status = ['upcoming', 'ongoing', 'past'];
@@ -428,14 +399,12 @@ const getEventByStatus = async (req, res) => {
             status: {
                 $in: [...status],
             },
-        }).session(session);
+        });
 
         if (!dbEvents) {
             return res.status(400).json(new ApiError(400, 'No events found'));
         }
 
-        await session.commitTransaction();
-        session.endSession();
         return res
             .status(200)
             .json(
@@ -446,8 +415,6 @@ const getEventByStatus = async (req, res) => {
                 )
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)
@@ -470,13 +437,10 @@ const changeEventStatus = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'Event is required'));
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const dbUser = await User.findById(user)
-            .select('-refreshToken -password')
-            .session(session);
+        const dbUser = await User.findById(user).select(
+            '-refreshToken -password'
+        );
 
         if (!dbUser)
             return res
@@ -486,7 +450,7 @@ const changeEventStatus = async (req, res) => {
                 );
 
         //authorize user
-        if (dbUser.role !== 'eventAdmin' || dbUser.role !== 'superAdmin') {
+        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
             return res
                 .status(400)
                 .json(
@@ -498,7 +462,7 @@ const changeEventStatus = async (req, res) => {
         }
 
         //check if the event already exists
-        const eventExists = await Event.findById(event).session(session);
+        const eventExists = await Event.findById(event);
 
         if (!eventExists) {
             return res
@@ -524,7 +488,7 @@ const changeEventStatus = async (req, res) => {
         const updatedEvent = await Event.findByIdAndUpdate(
             eventExists._id,
             { status },
-            { new: true, session: session }
+            { new: true }
         );
 
         if (!updatedEvent) {
@@ -532,9 +496,6 @@ const changeEventStatus = async (req, res) => {
                 .status(400)
                 .json(new ApiError(400, 'Error updating event status'));
         }
-
-        await session.commitTransaction();
-        session.endSession();
 
         return res
             .status(201)
@@ -546,8 +507,6 @@ const changeEventStatus = async (req, res) => {
                 )
             );
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)
@@ -564,25 +523,19 @@ const getEventById = async (req, res) => {
     if (!event) {
         return res.status(400).json(new ApiError(400, 'Event id is required'));
     }
-    const session = await mongoose.startSession();
-    session.startTransaction();
 
     try {
-        const dbEvent = await Event.findById(event).session(session);
+        const dbEvent = await Event.findById(event);
         if (!dbEvent) {
             return res
                 .status(400)
                 .json(new ApiError(400, 'No such event found'));
         }
-        await session.commitTransaction();
-        session.endSession();
 
         return res
             .status(200)
             .json(new ApiResponse(200, 'Event found', dbEvent));
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         console.log(error);
         return res
             .status(500)

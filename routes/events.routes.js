@@ -7,13 +7,14 @@ import {
     getEventByStatus,
     changeEventStatus,
 } from '../controllers/Events.controllers.js';
+import { verifyJWT } from '../middlewares/auth.middleware.js';
 const eventsRouter = Router();
 
-eventsRouter.post('/create', createEvent);
-eventsRouter.put('/update/:id', updateEvent);
-eventsRouter.delete('/delete/:id', deleteEvent);
-eventsRouter.get('/mode', getEventByMode);
-eventsRouter.get('/status', getEventByStatus);
-eventsRouter.put('/change-status/:id', changeEventStatus);
+eventsRouter.post('/create', verifyJWT, createEvent);
+eventsRouter.put('/update/:id', verifyJWT, updateEvent);
+eventsRouter.delete('/delete/:id', verifyJWT, deleteEvent);
+eventsRouter.get('/mode', verifyJWT, getEventByMode);
+eventsRouter.get('/status', verifyJWT, getEventByStatus);
+eventsRouter.put('/change-status/:id', verifyJWT, changeEventStatus);
 
 export default eventsRouter;

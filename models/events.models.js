@@ -28,8 +28,6 @@ const eventSchema = new mongoose.Schema({
     imageLink: {
         type: String,
         required: [true, 'Image Link is required'],
-        default:
-            'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.freepik.com%2Ffree-vector%2Fabstract-background-with-a-watercolor-splash_1055781.htm&psig=AOvVaw3',
     },
     status: {
         type: String,
@@ -44,4 +42,4 @@ const eventSchema = new mongoose.Schema({
 
 const Event = mongoose.model('Event', eventSchema);
 
-module.exports = Event;
+export default Event;
