@@ -18,6 +18,7 @@ const registerUser = async (req, res) => {
         country,
         role,
         isMember,
+        dateOfBirth, // new field
     } = req.body;
 
     if (!firstName) {
@@ -48,6 +49,9 @@ const registerUser = async (req, res) => {
     if (!country) {
         return res.status(400).json(new ApiError(400, 'Country is required'));
     }
+    if (!dateOfBirth) {
+        return res.status(400).json(new ApiError(400, 'Date of birth is required'));
+    }
 
     try {
         //check for existing user
@@ -71,6 +75,7 @@ const registerUser = async (req, res) => {
             country,
             role,
             isMember,
+            dateOfBirth, // new field
         });
 
         if (!createdUser) {
@@ -231,7 +236,7 @@ const assignUserRole = async (req, res) => {
     }
 };
 const getUserByRole = async (req, res) => {
-    const user = req.used._id;
+    const user = req.user._id; // fixed typo
     const { role } = req.body;
 
     if (!user) {
@@ -279,7 +284,7 @@ const getUserByRole = async (req, res) => {
     }
 };
 const getUserByStatus = async (req, res) => {
-    const user = req.used._id;
+    const user = req.user._id; // fixed typo
     const { status } = req.body;
 
     if (!user) {
@@ -300,12 +305,12 @@ const getUserByStatus = async (req, res) => {
             return res
                 .status(403)
                 .json(
-                    new ApiError(403, 'Only super admins can get users by role')
+                    new ApiError(403, 'Only super admins can get users by status')
                 );
         }
 
         const fetchedUsers = await User.find({
-            role: {
+            status: {
                 $in: [...status],
             },
         });
