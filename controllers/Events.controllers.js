@@ -1,7 +1,6 @@
 import { uploadMedia, deleteMedia } from '../utils/Cloudinary.js';
 import User from '../models/user.models.js';
 import Event from '../models/events.models.js';
-import mongoose from 'mongoose';
 import { ApiError, ApiResponse } from '../utils/index.js';
 const createEvent = async (req, res) => {
     const { name, description, timeline, mode, location, eventLink } = req.body;
@@ -9,60 +8,28 @@ const createEvent = async (req, res) => {
 
     const imagePath = req.file?.path;
     if (!user) {
-        return res.status(400).json(new ApiError(400, 'User is required'));
+        throw new Error('user token not found, please relogin');
     }
     if (!name) {
-        return res
-            .status(400)
-            .json(
-                new ApiError(
-                    400,
-                    'An event without a name cannot be registered'
-                )
-            );
+        throw new Error('An event without a name cannot be registered');
     }
-    if (!description || description.length < 50) {
-        return res
-            .status(400)
-            .json(
-                new ApiError(
-                    400,
-                    'An event without a description cannot be registered and the descrption should be atleast 50 characters long'
-                )
-            );
+    if (!description || description.trim().length < 50) {
+        throw new Error('Please provide a detailed description of the event');
     }
 
     if (!timeline) {
-        return res
-            .status(400)
-            .json(
-                new ApiError(
-                    400,
-                    'An event without a timeline cannot be registered'
-                )
-            );
+        throw new Error("an event without a timeline can't be registered");
     }
     if (!mode) {
-        return res
-            .status(400)
-            .json(
-                new ApiError(
-                    400,
-                    'Please specify whether the event is online, offline or hybrid'
-                )
-            );
+        throw new Error(
+            "please specify the mode of the event 'online' or 'offline'"
+        );
     }
     if (!location && mode === 'offline') {
-        return res
-            .status(400)
-            .json(
-                new ApiError(400, 'Please specify the location of the event')
-            );
+        throw new Error('please specify the location of the event');
     }
     if (!eventLink && mode === 'online') {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'Please specify the event link'));
+        throw new Error("please provide the event's link");
     }
 
     try {
@@ -70,23 +37,12 @@ const createEvent = async (req, res) => {
             '-refreshToken -password'
         );
 
-        if (!dbUser)
-            return res
-                .status(400)
-                .json(
-                    new ApiError(400, 'User Token not found, please relogin')
-                );
+        if (!dbUser) throw new Error('no such user found in the database');
         //authorize user
 
-        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
-            return res
-                .status(400)
-                .json(
-                    new ApiError(
-                        400,
-                        'You are not authorized to create an event'
-                    )
-                );
+        if (dbUser.role === 'membershipAdmin') {
+            return res;
+            throw new Error('you are not authorized to create an event');
         }
         let imageLink = '';
         //cloudinary upload
@@ -94,9 +50,7 @@ const createEvent = async (req, res) => {
             const result = await uploadMedia(imagePath);
 
             if (!result) {
-                return res
-                    .status(400)
-                    .json(new ApiError(400, 'Error uploading image'));
+                throw new Error('error in uploading image on server');
             }
             imageLink = result.secure_url;
         }
@@ -104,14 +58,9 @@ const createEvent = async (req, res) => {
 
         const eventExists = await Event.findOne({ name });
         if (eventExists) {
-            return res
-                .status(400)
-                .json(
-                    new ApiError(
-                        400,
-                        'An event with the same name already exists, try upating the details'
-                    )
-                );
+            throw new Error(
+                "Event with this name already exists, can't create"
+            );
         }
 
         const createdEvent = await Event.create({
@@ -124,12 +73,11 @@ const createEvent = async (req, res) => {
             imageLink:
                 imageLink ||
                 'https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.freepik.com%2Ffree-vector%2Fabstract-background-with-a-watercolor-splash_1055781.htm&psig=AOvVaw3',
+            createdBy: dbUser._id,
         });
 
         if (!createdEvent) {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'Error creating event'));
+            throw new Error('server failed to create the event');
         }
 
         return res
@@ -162,17 +110,10 @@ const updateEvent = async (req, res) => {
 
     const imagePath = req.file?.path;
     if (!user) {
-        return res.status(400).json(new ApiError(400, 'User is required'));
+        throw new Error('user token not found, please relogin');
     }
     if (!event) {
-        return res
-            .status(400)
-            .json(
-                new ApiError(
-                    400,
-                    'Please provide the event id to update the event'
-                )
-            );
+        throw new Error("please provide the event's id to update the event");
     }
 
     try {
@@ -180,37 +121,18 @@ const updateEvent = async (req, res) => {
             '-refreshToken -password'
         );
 
-        if (!dbUser)
-            return res
-                .status(400)
-                .json(
-                    new ApiError(400, 'User Token not found, please relogin')
-                );
+        if (!dbUser) throw new Error('no such user found in the database');
         //authorize user
 
-        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
-            return res
-                .status(400)
-                .json(
-                    new ApiError(
-                        400,
-                        'You are not authorized to create an event'
-                    )
-                );
+        if (dbUser.role === 'membershipAdmin') {
+            throw new Error('you are not authorized to create an event');
         }
 
         //check if the event already exists
         const eventExists = await Event.findById(event);
 
         if (!eventExists) {
-            return res
-                .status(400)
-                .json(
-                    new ApiError(
-                        400,
-                        'No such event avaliable or the event was deleted'
-                    )
-                );
+            throw new Error('No such event avaliable or the event was deleted');
         }
 
         let imageLink = eventExists.imageLink;
@@ -220,21 +142,12 @@ const updateEvent = async (req, res) => {
             //delete the previoud link from the database
             const deletedUrl = await deleteMedia(imageLink);
             if (!deletedUrl) {
-                return res
-                    .status(400)
-                    .json(
-                        new ApiError(
-                            400,
-                            'Error deleting the previous image link'
-                        )
-                    );
+                throw new Error('error in deleting the previous image');
             }
             const result = await uploadMedia(imagePath);
 
             if (!result) {
-                return res
-                    .status(400)
-                    .json(new ApiError(400, 'Error uploading image'));
+                throw new Error('error in uploading the image on server');
             }
             imageLink = result.secure_url;
         }
@@ -256,15 +169,13 @@ const updateEvent = async (req, res) => {
         );
 
         if (!updatedEvent) {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'Error creating event'));
+            throw new Error('server failed to update the event');
         }
 
         return res
             .status(201)
             .json(
-                new ApiResponse(201, 'Event created successfully', updatedEvent)
+                new ApiResponse(201, 'Event updated successfully', updatedEvent)
             );
     } catch (error) {
         console.log('event');
@@ -359,21 +270,24 @@ const deleteEvent = async (req, res) => {
     }
 };
 const getEventByMode = async (req, res) => {
-    const { mode } = req.body;
-    if (!mode) {
-        mode = ['online', 'offline', 'hybrid'];
-    }
-    try {
-        const dbEvents = await Event.find({
-            mode: {
-                $in: [...mode],
-            },
-        });
+    let { mode } = req.body;
 
-        if (!dbEvents) {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'No event in these modes found'));
+    try {
+        let dbEvents = [];
+        if (!mode) {
+            dbEvents = await Event.find({
+                mode,
+            });
+        } else {
+            dbEvents = await Event.find({
+                mode: {
+                    $in: ['offline', 'online', 'hybrid'],
+                },
+            });
+        }
+
+        if (!dbEvents || dbEvents.length === 0) {
+            throw new Error('no event records found in the database');
         }
 
         return res
@@ -389,20 +303,23 @@ const getEventByMode = async (req, res) => {
     }
 };
 const getEventByStatus = async (req, res) => {
-    const { status } = req.body;
+    let { status } = req.body;
 
-    if (!status) {
-        status = ['upcoming', 'ongoing', 'past'];
-    }
     try {
-        const dbEvents = await Event.find({
-            status: {
-                $in: [...status],
-            },
-        });
+        let dbEvents = [];
+        if (status) {
+            status = ['upcoming', 'ongoing', 'past'];
+            dbEvents = await Event.find({ status });
+        } else {
+            dbEvents = await Event.find({
+                status: {
+                    $in: ['upcoming', 'ongoing', 'past'],
+                },
+            });
+        }
 
-        if (!dbEvents) {
-            return res.status(400).json(new ApiError(400, 'No events found'));
+        if (!dbEvents || dbEvents.length === 0) {
+            throw new Error('no event records found in the database');
         }
 
         return res
@@ -428,13 +345,13 @@ const changeEventStatus = async (req, res) => {
     const user = req.user._id;
     const { status } = req.body;
     if (!user) {
-        return res.status(400).json(new ApiError(400, 'User is required'));
+        throw new Error('user token not found, please relogin');
     }
     if (!status) {
-        return res.status(400).json(new ApiError(400, 'Status is required'));
+        throw new Error('Event status is required');
     }
     if (!event) {
-        return res.status(400).json(new ApiError(400, 'Event is required'));
+        throw new Error('please give the event id');
     }
 
     try {
@@ -442,47 +359,24 @@ const changeEventStatus = async (req, res) => {
             '-refreshToken -password'
         );
 
-        if (!dbUser)
-            return res
-                .status(400)
-                .json(
-                    new ApiError(400, 'User Token not found, please relogin')
-                );
+        if (!dbUser) throw new Error('no such user found in the database');
 
         //authorize user
-        if (dbUser.role === 'user' || dbUser.role === 'membershipAdmin') {
-            return res
-                .status(400)
-                .json(
-                    new ApiError(
-                        400,
-                        'You are not authorized to change the event status'
-                    )
-                );
+        if (dbUser.role === 'membershipAdmin') {
+            throw new Error(
+                "you are not authorized to change the event's status"
+            );
         }
 
         //check if the event already exists
         const eventExists = await Event.findById(event);
 
         if (!eventExists) {
-            return res
-                .status(400)
-                .json(
-                    new ApiError(
-                        400,
-                        'No such event avaliable or the event was deleted'
-                    )
-                );
+            throw new Error('no such event exists, try creating one');
         }
 
         if (status === eventExists.status) {
-            return res.json(
-                new ApiResponse(
-                    200,
-                    'Event status is already the same',
-                    eventExists
-                )
-            );
+            throw new Error('Event is already in the same state');
         }
 
         const updatedEvent = await Event.findByIdAndUpdate(
@@ -492,9 +386,7 @@ const changeEventStatus = async (req, res) => {
         );
 
         if (!updatedEvent) {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'Error updating event status'));
+            throw new Error("server failed to update the event's status");
         }
 
         return res
