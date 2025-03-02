@@ -24,7 +24,7 @@ const verifyJWT = async (req, res, next) => {
             .json(new ApiError(401, 'couldnot fetch the user from the token'));
 
     req.user = user;
-
+    console.log(user);
     next();
 };
 

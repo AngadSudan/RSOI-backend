@@ -1,31 +1,11 @@
-// {
-//     id,
-//     firstname,
-//     lastname,
-//     email,
-//     phoneNumber,
-//     password,
-//     type:['individual','coprate','student'],
-//     address,
-//     country,
-//     role:['superAdmin','eventAdmin','membershipAdmin','user' ],
-//     // isMember:false
-// }
-
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const userSchema = new Schema({
-    firstName: {
+    name: {
         type: String,
         required: [true, 'First name is required'],
-        trim: true,
-        lower: true,
-    },
-    lastName: {
-        type: String,
-        required: [true, 'Last name is required'],
         trim: true,
         lower: true,
     },
@@ -38,38 +18,16 @@ const userSchema = new Schema({
             'Please enter a valid email address',
         ],
     },
-    phoneNumber: {
-        type: String,
-        required: [true, 'Phone number is required'],
-        unique: [true, 'Phone number already exist'],
-    },
     password: {
         type: String,
         required: [true, 'Password is required'],
         minlength: 6,
     },
-    usertype: {
-        type: String,
-        required: [true, 'User type is required'],
-        enum: ['individual', 'coprate', 'student'],
-    },
-    address: {
-        type: String,
-    },
-    country: {
-        type: String,
-        required: [true, 'Country is required'],
-        default: 'India',
-    },
     role: {
         type: String,
         required: [true, 'Role is required'],
-        enum: ['superAdmin', 'eventAdmin', 'membershipAdmin', 'user'],
+        enum: ['superAdmin', 'eventAdmin', 'membershipAdmin'],
         default: 'user',
-    },
-    isMember: {
-        type: Boolean,
-        default: false,
     },
     refreshToken: {
         type: String,

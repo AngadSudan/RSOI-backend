@@ -81,7 +81,7 @@ app.get('/health', (req, res) => {
 app.use((req, res) => {
     res.status(404).json({
         status: 404,
-        error: 'Not Found',
+        error: 'The route you were trying to access was Not Found',
     });
 });
 

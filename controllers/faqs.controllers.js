@@ -1,5 +1,5 @@
-import ApiError from '../utils/ApiError.js';
-import ApiResponse from '../utils/ApiResponse.js';
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 import Faq from '../models/faqs.models.js';
 import User from '../models/user.models.js';
 import mongoose from 'mongoose';
@@ -7,59 +7,47 @@ const createFaq = async (req, res) => {
     const user = req.user._id;
     const { question, answer, status } = req.body;
     if (!user) {
-        return res
-            .status(401)
-            .json(new ApiError(401, 'user token not found please login'));
+        throw new Error('missing refresh and access tokens');
     }
     if (!question) {
-        return res.status(400).json(new ApiError(400, 'missing question'));
+        throw new Error('question is required to post an faq');
     }
     if (!answer) {
-        return res.status(400).json(new ApiError(400, 'missing answer'));
+        throw new Error('answer is required to post an faq');
     }
-    if (!status) {
-        status = 'active';
-    }
+
     try {
         const dbUser = await User.findById(user).select(
             '-password -refreshToken'
         );
         if (!user) {
-            return res
-                .status(404)
-                .json(new ApiError(404, 'user not found in database'));
+            throw new Error('no such user in the database');
         }
 
-        if (dbUser.role !== 'superAdmin' || dbUser.role !== 'eventAdmin') {
-            return res
-                .status(403)
-                .json(new ApiError(403, 'You are not allowed to create FAQ'));
+        if (dbUser.role === 'membershipAdmin') {
+            throw new Error('you are unAuthorized to access the FAQ section');
         }
 
         const createdFaq = await Faq.create({
             creator: dbUser._id,
             question,
             answer,
-            status,
+            status: status || 'active',
         });
 
         if (!createdFaq) {
-            return res
-                .status(500)
-                .json(new ApiError(500, 'user cannot be created'));
+            throw new Error("faq couldn't be created");
         }
 
         const precievedFAQ = await Faq.findById(createdFaq._id);
         if (!precievedFAQ) {
-            return res
-                .status(500)
-                .json(new ApiError(500, 'faq is not saved in the database'));
+            throw new Error('could not fetch the faq after creation');
         }
         return res
             .status(200)
             .json(
                 new ApiResponse(
-                    500,
+                    200,
                     precievedFAQ,
                     'faqs has been created succesfully'
                 )
@@ -71,7 +59,8 @@ const createFaq = async (req, res) => {
             .json(
                 new ApiError(
                     500,
-                    'Internal server error while creating the FAQ'
+                    error.message ||
+                        'Internal server error while creating the FAQ'
                 )
             );
     }
@@ -81,9 +70,7 @@ const updateFaq = async (req, res) => {
     const { question, answer } = req.body;
     const { id } = req.params;
     if (!user) {
-        return res
-            .status(401)
-            .json(new ApiError(401, 'user token has not been found'));
+        throw new Error("user token couldn't be found please login again");
     }
 
     try {
@@ -91,27 +78,16 @@ const updateFaq = async (req, res) => {
             '-password -refreshToken'
         );
         if (!user) {
-            return res
-                .status(404)
-                .json(new ApiError(404, 'user not found in database'));
+            throw new Error('user not found in the database');
         }
 
-        if (dbUser.role !== 'superAdmin' || dbUser.role !== 'eventAdmin') {
-            return res
-                .status(403)
-                .json(new ApiError(403, 'You are not allowed to update FAQ'));
+        if (dbUser.role === 'membershipAdmin') {
+            throw new Error("you are not allowed to update any FAQ's");
         }
 
         const dbFaq = await Faq.findById(id);
         if (!dbFaq) {
-            return res
-                .status(401)
-                .json(
-                    new ApiError(
-                        401,
-                        'faq couldnot be loaded, wrong id entered'
-                    )
-                );
+            throw new Error('trying to update a non-existing FAQ');
         }
 
         const updatedfaq = await Faq.findByIdAndUpdate(
@@ -125,14 +101,7 @@ const updateFaq = async (req, res) => {
             }
         );
         if (!updatedfaq) {
-            return res
-                .status(401)
-                .json(
-                    new ApiError(
-                        401,
-                        'faqs updation failed please try again later'
-                    )
-                );
+            throw new Error('faq updation failed');
         }
 
         return res
@@ -212,31 +181,23 @@ const toggleFaqStatus = async (req, res) => {
     const user = req.user._id;
     const { id } = req.params;
     if (!user) {
-        return res
-            .status(401)
-            .json(new ApiError(401, 'user token not found please login'));
+        throw new Error("user token couldn't be found please login again");
     }
     try {
         const dbUser = await User.findById(user).select(
             '-password -refreshToken'
         );
         if (!user) {
-            return res
-                .status(404)
-                .json(new ApiError(404, 'user not found in database'));
+            throw new Error('user could not be found in the database');
         }
 
-        if (dbUser.role !== 'superAdmin' || dbUser.role !== 'eventAdmin') {
-            return res
-                .status(403)
-                .json(new ApiError(403, 'You are not allowed to create FAQ'));
+        if (dbUser.role === 'membershipAdmin') {
+            throw new Error("you are not allowed to toggle the FAQ's status");
         }
 
-        const dbFaq = await Faq.findById(faqid);
+        const dbFaq = await Faq.findById(id);
         if (!dbFaq) {
-            return res
-                .status(400)
-                .json(new ApiError(401, 'faq not found in the database'));
+            throw new Error("no such FAQ's found in the database");
         }
 
         const toggleFaq = await Faq.findByIdAndUpdate(
@@ -248,14 +209,7 @@ const toggleFaqStatus = async (req, res) => {
         );
 
         if (!toggleFaq)
-            return res
-                .status(401)
-                .json(
-                    new ApiResponse(
-                        401,
-                        'status couldnot be updated try again later'
-                    )
-                );
+            throw new Error("faq's status couldn't be toggled in the database");
 
         return res
             .status(200)
@@ -275,31 +229,25 @@ const deleteFaq = async (req, res) => {
     const user = req.user._id;
     const { id } = req.params;
     if (!user) {
-        return res
-            .status(401)
-            .json(new ApiError(401, 'user token not found please login'));
+        throw new Error("user token couldn't be found please login again");
     }
     try {
         const dbUser = await User.findById(user).select(
             '-password -refreshToken'
         );
         if (!user) {
-            return res
-                .status(404)
-                .json(new ApiError(404, 'user not found in database'));
+            throw new Error("user couldn't be found in the database");
         }
 
-        if (dbUser.role !== 'superAdmin' || dbUser.role !== 'eventAdmin') {
-            return res
-                .status(403)
-                .json(new ApiError(403, 'You are not allowed to create FAQ'));
+        if (dbUser.role === 'membershipAdmin') {
+            throw new Error("you are not allowed to delete the FAQ's");
         }
 
-        const deletedFaq = await Faq.findByIdAndDelete(faqid);
+        const deletedFaq = await Faq.findByIdAndDelete(id);
 
         return res
             .status(200)
-            .json(new ApiResponse(200, deletedFaq, 'FAQ toggled'));
+            .json(new ApiResponse(200, deletedFaq, 'FAQ deleted'));
     } catch (error) {
         console.log(error);
         return res

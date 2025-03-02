@@ -548,8 +548,8 @@ export {
     createEvent,
     updateEvent,
     deleteEvent,
-    getEventByMode,
     changeEventStatus,
+    getEventByMode,
     getEventByStatus,
     getEventById,
 };

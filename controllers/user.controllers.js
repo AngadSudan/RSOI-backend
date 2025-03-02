@@ -7,56 +7,17 @@ const getTokens = async (user) => {
     return { accessToken, refreshToken };
 };
 const registerUser = async (req, res) => {
-    const {
-        firstName,
-        lastName,
-        email,
-        phoneNumber,
-        password,
-        usertype,
-        address,
-        country,
-        role,
-        isMember,
-        dateOfBirth, // new field
-    } = req.body;
+    const { name, email, password, role } = req.body;
 
-    if (!firstName) {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'First name is required'));
-    }
-    if (!lastName) {
-        return res.status(400).json(new ApiError(400, 'Last name is required'));
-    }
-    if (!email) {
-        return res.status(400).json(new ApiError(400, 'Email is required'));
-    }
-    if (!phoneNumber) {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'Phone number is required'));
-    }
-    if (!password) {
-        return res.status(400).json(new ApiError(400, 'Password is required'));
-    }
-    if (!usertype) {
-        return res.status(400).json(new ApiError(400, 'User type is required'));
-    }
-    if (!address) {
-        return res.status(400).json(new ApiError(400, 'Address is required'));
-    }
-    if (!country) {
-        return res.status(400).json(new ApiError(400, 'Country is required'));
-    }
-    if (!dateOfBirth) {
-        return res.status(400).json(new ApiError(400, 'Date of birth is required'));
-    }
+    if (!name) throw new Error('Name is required');
+    if (!email) throw new Error('Email is required');
+    if (!password) throw new Error('Password is required');
+    if (!role) throw new Error('Role is required');
 
     try {
         //check for existing user
         const existingUser = await User.findOne({
-            $or: [{ email: email }, { phoneNumber: phoneNumber }],
+            email,
         });
 
         if (existingUser) {
@@ -64,29 +25,24 @@ const registerUser = async (req, res) => {
                 .status(400)
                 .json(new ApiError(400, 'User already exists'));
         }
-        const createdUser = await User.create({
-            firstName,
-            lastName,
+        let createdUser = await User.create({
+            name,
             email,
-            phoneNumber,
             password,
-            usertype,
-            address,
-            country,
             role,
-            isMember,
-            dateOfBirth, // new field
         });
 
         if (!createdUser) {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'User registration failed'));
+            throw new Error('User not created');
         }
-
+        createdUser = await User.findById(createdUser._id).select(
+            '-password -refreshToken'
+        );
         return res
             .status(201)
-            .json(new ApiResponse(201, 'User created', createdUser));
+            .json(
+                new ApiResponse(201, createdUser, 'user created Successfully')
+            );
     } catch (error) {
         console.log(error);
         res.status(500).json(
@@ -97,32 +53,24 @@ const registerUser = async (req, res) => {
     }
 };
 const loginUser = async (req, res) => {
-    const { email, phoneNumber, password } = req.body;
-    if (!email && !phoneNumber) {
-        return res
-            .status(400)
-            .json(new ApiError(400, 'Email or Phone number is required'));
-    }
-    if (!password) {
-        return res.status(400).json(new ApiError(400, 'Password is required'));
-    }
+    const { email, password } = req.body;
+    if (!email) throw new Error('Email is required');
+    if (!password) throw new Error('Password is required');
 
     try {
         //check if email is present
         const dbUser = await User.findOne({
-            $or: [{ email: email }, { phoneNumber: phoneNumber }],
+            email,
         });
 
         if (!dbUser) {
-            return res.status(400).json(new ApiError(400, 'User not found'));
+            throw new Error("User doesn't exist");
         }
 
         const isAuthorized = dbUser.isPasswordCorrect(password);
 
         if (!isAuthorized) {
-            return res
-                .status(400)
-                .json(new ApiError(401, 'Invalid credentials'));
+            throw new Error('Invalid credentials');
         }
 
         const { accessToken, refreshToken } = await getTokens(dbUser);
@@ -135,7 +83,7 @@ const loginUser = async (req, res) => {
         ).select('-password -refreshToken');
 
         if (!updatedUser) {
-            return res.status(400).json(new ApiError(400, 'Login failed'));
+            throw new Error("couldn't update the register token in db");
         }
 
         const options = {
@@ -146,11 +94,16 @@ const loginUser = async (req, res) => {
         return res
             .status(200)
             .cookie('accessToken', accessToken, options)
+            .cookie('refreshToken', refreshToken, options)
             .json(
-                new ApiResponse(200, 'Login successful', {
-                    accessToken,
-                    user: updatedUser,
-                })
+                new ApiResponse(
+                    200,
+                    {
+                        accessToken,
+                        user: updatedUser,
+                    },
+                    'login successful'
+                )
             );
     } catch (error) {
         console.log(error);
@@ -305,7 +258,10 @@ const getUserByStatus = async (req, res) => {
             return res
                 .status(403)
                 .json(
-                    new ApiError(403, 'Only super admins can get users by status')
+                    new ApiError(
+                        403,
+                        'Only super admins can get users by status'
+                    )
                 );
         }
 
