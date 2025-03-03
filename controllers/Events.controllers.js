@@ -7,32 +7,35 @@ const createEvent = async (req, res) => {
     const user = req.user._id;
 
     const imagePath = req.file?.path;
-    if (!user) {
-        throw new Error('user token not found, please relogin');
-    }
-    if (!name) {
-        throw new Error('An event without a name cannot be registered');
-    }
-    if (!description || description.trim().length < 50) {
-        throw new Error('Please provide a detailed description of the event');
-    }
-
-    if (!timeline) {
-        throw new Error("an event without a timeline can't be registered");
-    }
-    if (!mode) {
-        throw new Error(
-            "please specify the mode of the event 'online' or 'offline'"
-        );
-    }
-    if (!location && mode === 'offline') {
-        throw new Error('please specify the location of the event');
-    }
-    if (!eventLink && mode === 'online') {
-        throw new Error("please provide the event's link");
-    }
 
     try {
+        if (!user) {
+            throw new Error('user token not found, please relogin');
+        }
+        if (!name) {
+            throw new Error('An event without a name cannot be registered');
+        }
+        if (!description || description.trim().length < 50) {
+            throw new Error(
+                'Please provide a detailed description of the event'
+            );
+        }
+
+        if (!timeline) {
+            throw new Error("an event without a timeline can't be registered");
+        }
+        if (!mode) {
+            throw new Error(
+                "please specify the mode of the event 'online' or 'offline'"
+            );
+        }
+        if (!location && mode === 'offline') {
+            throw new Error('please specify the location of the event');
+        }
+        if (!eventLink && mode === 'online') {
+            throw new Error("please provide the event's link");
+        }
+
         const dbUser = await User.findById(user).select(
             '-refreshToken -password'
         );
@@ -41,7 +44,6 @@ const createEvent = async (req, res) => {
         //authorize user
 
         if (dbUser.role === 'membershipAdmin') {
-            return res;
             throw new Error('you are not authorized to create an event');
         }
         let imageLink = '';
@@ -274,10 +276,8 @@ const getEventByMode = async (req, res) => {
 
     try {
         let dbEvents = [];
-        if (!mode) {
-            dbEvents = await Event.find({
-                mode,
-            });
+        if (mode) {
+            dbEvents = await Event.find({ mode });
         } else {
             dbEvents = await Event.find({
                 mode: {
@@ -287,12 +287,14 @@ const getEventByMode = async (req, res) => {
         }
 
         if (!dbEvents || dbEvents.length === 0) {
-            throw new Error('no event records found in the database');
+            return res
+                .status(200)
+                .json(new ApiResponse(200, [], 'no Event data found'));
         }
 
         return res
             .status(200)
-            .json(new ApiResponse(200, 'Offline events found', dbEvents));
+            .json(new ApiResponse(200, dbEvents, 'Event data found'));
     } catch (error) {
         console.log(error);
         return res
@@ -308,7 +310,7 @@ const getEventByStatus = async (req, res) => {
     try {
         let dbEvents = [];
         if (status) {
-            status = ['upcoming', 'ongoing', 'past'];
+            //status = ['upcoming', 'ongoing', 'past'];
             dbEvents = await Event.find({ status });
         } else {
             dbEvents = await Event.find({
@@ -319,7 +321,15 @@ const getEventByStatus = async (req, res) => {
         }
 
         if (!dbEvents || dbEvents.length === 0) {
-            throw new Error('no event records found in the database');
+            return res
+                .status(200)
+                .json(
+                    new ApiResponse(
+                        200,
+                        [],
+                        'no events found with the following status found'
+                    )
+                );
         }
 
         return res
@@ -327,8 +337,8 @@ const getEventByStatus = async (req, res) => {
             .json(
                 new ApiResponse(
                     200,
-                    ' events found with the following status found',
-                    dbEvents
+                    dbEvents,
+                    ' events found with the following status found'
                 )
             );
     } catch (error) {

@@ -14,6 +14,7 @@ import {
     faqRouter,
     supportRouter,
     reviewRouter,
+    announcementRouter,
     membershipRouter,
 } from './routes/index.js';
 
@@ -73,6 +74,7 @@ app.use('/api/v1/user', userRouter);
 app.use('/api/v1/faq', faqRouter);
 app.use('/api/v1/review', reviewRouter);
 app.use('/api/v1/membership', membershipRouter);
+app.use('/api/v1/announcement', announcementRouter);
 
 app.get('/health', (req, res) => {
     res.status(200).json({

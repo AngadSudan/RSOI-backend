@@ -55,8 +55,8 @@ const getSupport = async (req, res) => {
                     .json(
                         new ApiResponse(
                             200,
-                            'The result of the response is generated',
-                            supportContent
+                            supportContent,
+                            'The result of the response is generated'
                         )
                     );
             } catch (error) {

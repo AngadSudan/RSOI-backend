@@ -11,7 +11,7 @@ Cloudinary.config({
 const uploadMedia = async (file) => {
     try {
         return await Cloudinary.uploader.upload(file, {
-            resource_type: auto,
+            resource_type: 'auto',
         });
     } catch (error) {
         console.log('error in uploading media to cloudinary', error);

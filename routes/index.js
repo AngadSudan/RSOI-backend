@@ -4,6 +4,7 @@ import faqRouter from './faq.routes.js';
 import supportRouter from './support.routes.js';
 import reviewRouter from './review.routes.js';
 import membershipRouter from './membership.routes.js';
+import announcementRouter from './announcements.routes.js';
 export {
     membershipRouter,
     eventsRouter,
@@ -11,4 +12,5 @@ export {
     faqRouter,
     supportRouter,
     reviewRouter,
+    announcementRouter,
 };
