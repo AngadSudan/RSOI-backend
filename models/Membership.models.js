@@ -1,44 +1,122 @@
+// const globalData = {
+//     personal: {
+//         firstName: '',
+//         lastName: '',
+//         DOB: '',
+//         Nationality: '',
+//         panCardNumber: '',
+//         address: '',
+//         pincode: '',
+//         phone: '',
+//         email: '',
+//     },
+//     organizational: {
+//         designation: '',
+//         organization: '',
+//         highestQualification: '',
+//         officeAddress: '',
+//         mainFieldsOfInterest: [],
+//         pinCode: '',
+//     },
+//     membershipType: {
+//         basePrice: 50000,
+//         gst: 9000,
+//         name: 'Corporate',
+//         requirements: '',
+//         totalPrice: 59000,
+//         validity: 'For 5 years for 5 representatives',
+//     },
+//     currentState: 0,
+//     status: 'pending', //  [incomplete, pending, approved, payment, member]
+//     isSuccessFul: false,
+//     reasonForRejection: '',
+// };
+
 import mongoose from 'mongoose';
 
-// {
-//     userid,
-//         membershipid,
-//         membershipname,
-//         membershipStatus,
-//         feeStatus,
-//         feeAmount,
-//         reciptId;
-// }
 const membershipSchema = new mongoose.Schema({
-    userid: {
-        type: String,
-        required: [true, 'Please enter the user id'],
+    personal: {
+        firstName: {
+            type: String,
+            required: true,
+        },
+        lastName: String,
+        DOB: {
+            type: Date,
+            required: true,
+        },
+        Nationality: {
+            type: String,
+            required: true,
+        },
+        panCardNumber: {
+            type: String,
+            required: true,
+            unique: true,
+        },
+        address: String,
+        pincode: String,
+        phone: {
+            type: String,
+            required: true,
+            unique: true,
+        },
+        email: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
+        },
     },
-    membershipname: {
-        type: String,
-        required: [true, 'Please enter the membership name'],
+    organizational: {
+        designation: String,
+        organization: String,
+        highestQualification: String,
+        officeAddress: String,
+        mainFieldsOfInterest: [String],
+        pinCode: String,
     },
-    membershipStatus: {
-        type: String,
-        enum: ['pending', 'terminated', 'active', 'expired', 'rejected'],
-        default: 'pending',
+    membershipType: {
+        basePrice: Number,
+        gst: Number,
+        name: {
+            type: String,
+            enum: [
+                'Corporate',
+                'Individual',
+                'Student (B.Tech/B.Sc/Diploma)',
+                'Student (M.Tech/MS/PhD)',
+                'Student to Individual',
+            ],
+            required: true,
+        },
+        requirements: String,
+        totalPrice: Number,
+        validity: String,
     },
-    feeStatus: {
-        type: String,
-        required: [true, 'Please enter the fee status'],
-        enum: ['paid', 'unpaid'],
-        default: 'paid',
-    },
-    feeAmount: {
+    currentState: {
         type: Number,
-        required: [true, 'Please enter the fee amount'],
+        default: 0,
+        required: true,
     },
-    reciptId: {
+    status: {
         type: String,
-        required: [true, 'Please enter the recipt id'],
+        enum: [
+            'incomplete',
+            'pending',
+            'approved',
+            'rejected',
+            'payment',
+            'member',
+        ],
+        default: 'pending',
+        required: true,
+    },
+    reasonForRejection: {
+        type: String,
+        default: '',
     },
 });
 
-const Membership = mongoose.model('membership', membershipSchema);
-
+const Membership = mongoose.model('Membership', membershipSchema);
 export default Membership;

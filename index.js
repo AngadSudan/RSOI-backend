@@ -14,6 +14,7 @@ import {
     faqRouter,
     supportRouter,
     reviewRouter,
+    membershipRouter,
 } from './routes/index.js';
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/v1/events', eventsRouter);
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/faq', faqRouter);
 app.use('/api/v1/review', reviewRouter);
+app.use('/api/v1/membership', membershipRouter);
 
 app.get('/health', (req, res) => {
     res.status(200).json({
