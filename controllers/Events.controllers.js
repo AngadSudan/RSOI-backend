@@ -446,6 +446,34 @@ const getEventById = async (req, res) => {
             );
     }
 };
+
+const getEventByName = async (req, res) => {
+    const { text: event } = req.params;
+
+    if (!event) {
+        return res.status(400).json(new ApiError(400, 'Event id is required'));
+    }
+
+    try {
+        const dbEvent = await Event.find({ name: event });
+        if (!dbEvent) {
+            return res
+                .status(400)
+                .json(new ApiError(400, 'No such event found'));
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, 'Event found', dbEvent));
+    } catch (error) {
+        console.log(error);
+        return res
+            .status(500)
+            .json(
+                new ApiError(500, 'Error in fetching event', [error.message])
+            );
+    }
+};
 export {
     createEvent,
     updateEvent,
@@ -454,6 +482,7 @@ export {
     getEventByMode,
     getEventByStatus,
     getEventById,
+    getEventByName,
 };
 
 //TODO: Get event by id

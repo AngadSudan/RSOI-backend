@@ -6,6 +6,7 @@ import {
     getEventByMode,
     getEventByStatus,
     changeEventStatus,
+    getEventByName,
 } from '../controllers/Events.controllers.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
@@ -23,6 +24,7 @@ eventsRouter.put(
     verifyJWT,
     updateEvent
 );
+eventsRouter.post('/fetch', getEventByName);
 eventsRouter.delete('/delete/:id', verifyJWT, deleteEvent);
 eventsRouter.get('/mode', getEventByMode);
 eventsRouter.get('/status', getEventByStatus);
