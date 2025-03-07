@@ -6,6 +6,9 @@ const createEvent = async (req, res) => {
     const { name, description, timeline, mode, location, eventLink } = req.body;
     const user = req.user._id;
 
+    console.log('Request Body:', req.body);
+    console.log('File:', req.file);
+
     const imagePath = req.file?.path;
 
     try {
@@ -50,7 +53,7 @@ const createEvent = async (req, res) => {
         //cloudinary upload
         if (imagePath) {
             const result = await uploadMedia(imagePath);
-
+            console.log(result);
             if (!result) {
                 throw new Error('error in uploading image on server');
             }
@@ -85,7 +88,7 @@ const createEvent = async (req, res) => {
         return res
             .status(201)
             .json(
-                new ApiResponse(201, 'Event created successfully', createdEvent)
+                new ApiResponse(201, createdEvent, 'Event created successfully')
             );
     } catch (error) {
         console.log('event');
@@ -448,14 +451,15 @@ const getEventById = async (req, res) => {
 };
 
 const getEventByName = async (req, res) => {
-    const { text: event } = req.params;
+    const { text: event } = req.body;
 
     if (!event) {
         return res.status(400).json(new ApiError(400, 'Event id is required'));
     }
 
     try {
-        const dbEvent = await Event.find({ name: event });
+        console.log(event);
+        const dbEvent = await Event.findOne({ name: event });
         if (!dbEvent) {
             return res
                 .status(400)
@@ -464,7 +468,7 @@ const getEventByName = async (req, res) => {
 
         return res
             .status(200)
-            .json(new ApiResponse(200, 'Event found', dbEvent));
+            .json(new ApiResponse(200, dbEvent, 'Event found'));
     } catch (error) {
         console.log(error);
         return res

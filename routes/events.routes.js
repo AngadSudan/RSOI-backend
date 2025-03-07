@@ -24,7 +24,7 @@ eventsRouter.put(
     verifyJWT,
     updateEvent
 );
-eventsRouter.post('/fetch', getEventByName);
+eventsRouter.post('/get-event-by-name', verifyJWT, getEventByName);
 eventsRouter.delete('/delete/:id', verifyJWT, deleteEvent);
 eventsRouter.get('/mode', getEventByMode);
 eventsRouter.get('/status', getEventByStatus);
