@@ -274,32 +274,43 @@ const deleteEvent = async (req, res) => {
             );
     }
 };
-const getEventByMode = async (req, res) => {
-    let { mode } = req.body;
 
+const getEventByMode = async (req, res) => {
     try {
-        let dbEvents = [];
+        const { mode } = req.query;
+        console.log("Mode requested:", mode, "Type:", typeof mode); 
+        
+        let query = { isPublic: true };
+        
         if (mode) {
-            dbEvents = await Event.find({ mode });
-        } else {
-            dbEvents = await Event.find({
-                mode: {
-                    $in: ['offline', 'online', 'hybrid'],
-                },
-            });
+            const normalizedMode = mode.toLowerCase();
+            if (['online', 'offline', 'hybrid'].includes(normalizedMode)) {
+                query.mode = normalizedMode;
+                console.log("Filtering by mode:", normalizedMode);
+            } else {
+                console.log("Invalid mode provided:", mode);
+            }
+        }
+        
+        console.log("MongoDB query:", JSON.stringify(query));
+        
+        const dbEvents = await Event.find(query);
+        
+        if (dbEvents.length > 0) {
+            console.log("Sample event modes:", dbEvents.slice(0, 3).map(e => e.mode));
         }
 
         if (!dbEvents || dbEvents.length === 0) {
             return res
                 .status(200)
-                .json(new ApiResponse(200, [], 'no Event data found'));
+                .json(new ApiResponse(200, [], 'No events found for the specified criteria'));
         }
 
         return res
             .status(200)
-            .json(new ApiResponse(200, dbEvents, 'Event data found'));
+            .json(new ApiResponse(200, dbEvents, 'Events found successfully'));
     } catch (error) {
-        console.log(error);
+        console.error("Error in getEventByMode:", error);
         return res
             .status(500)
             .json(
