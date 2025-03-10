@@ -307,11 +307,22 @@ const generateAccessOTP = async (req, res) => {
     const { trackingId } = req.body;
     try {
         if (!trackingId) throw new Error('trackingId not found');
-        const membership = await Membership.findOne({ trackingId });
-        if (!membership) throw new Error('no such membership found');
+        const dbMembership = await Membership.find({
+            $or: [
+                { 'personal.email': trackingId },
+                { 'personal.phone': trackingId },
+                { 'personal.panCardNumber': trackingId },
+            ],
+        });
+        if (!dbMembership) throw new Error('no such membership found');
+
         const otp = Math.floor(100000 + Math.random() * 900000);
 
-        return res.status(200).json(new ApiResponse(200, { otp }, 'OTP sent'));
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, { otp, user: dbMembership }, 'OTP sent')
+            );
     } catch (error) {
         console.log(error);
         return res
@@ -388,7 +399,7 @@ const changeMembershipStatus = async (req, res) => {
     }
 };
 const getMembershipInfo = async (req, res) => {
-    const { id: membershipId } = req.params;
+    const { text: membershipId } = req.body;
     const user = req.user._id;
 
     try {
@@ -401,7 +412,15 @@ const getMembershipInfo = async (req, res) => {
         if (!dbUser) throw new Error('no such user found');
         if (dbUser.role === 'eventAdmin')
             throw new Error('event admin can not get membership info');
-        const dbMembership = await Membership.findById(membershipId);
+
+        const dbMembership = await Membership.find({
+            $or: [
+                { 'personal.email': membershipId },
+                { 'personal.phone': membershipId },
+                { 'personal.panCardNumber': membershipId },
+                // { _id: membershipId },
+            ],
+        });
         if (!dbMembership) throw new Error('no such membership found');
 
         return res
@@ -427,6 +446,82 @@ const getMembershipInfo = async (req, res) => {
     }
 };
 
+const getMembershipById = async (req, res) => {
+    const { membership: membershipId } = req.params;
+    const user = req.user._id;
+    try {
+        if (!user) throw new Error('user token not found, kindly relogin');
+        if (!membershipId) throw new Error('membership id not found');
+
+        const dbUser = await User.findById(user).select(
+            '-password -refreshToken'
+        );
+        if (!dbUser) throw new Error('no such user found');
+        if (dbUser.role === 'eventAdmin')
+            throw new Error('event admin can not get membership info');
+
+        const dbMembership = await Membership.findById(membershipId);
+        if (!dbMembership) throw new Error('no such member found');
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    dbMembership,
+                    'membership info fetched successfully'
+                )
+            );
+    } catch (error) {
+        console.log(error);
+        return res
+            .status(400)
+            .json(
+                new ApiError(
+                    500,
+                    'error in getting membership info',
+                    error.message
+                )
+            );
+    }
+};
+
+const getMembershipByStatus = async (req, res) => {
+    const user = req.user._id;
+    const { status } = req.body;
+    try {
+        if (!user) throw new Error('user token not found, kindly relogin');
+        if (!status) throw new Error('status not found');
+        const dbUser = await User.findById(user).select(
+            '-password -refreshToken'
+        );
+        if (!dbUser) throw new Error('no such user found');
+        if (dbUser.role === 'eventAdmin')
+            throw new Error('event admin can not get membership info');
+        const dbMembership = await Membership.find({ status });
+        if (!dbMembership) throw new Error('no such membership found');
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    dbMembership,
+                    'membership info fetched successfully'
+                )
+            );
+    } catch (error) {
+        console.log(error);
+        return res
+            .status(500)
+            .json(
+                new ApiError(
+                    500,
+                    'error in getting membership info',
+                    error.message
+                )
+            );
+    }
+};
 export {
     createMembership,
     generateAccessOTP,
@@ -434,4 +529,6 @@ export {
     updateMembershipInfo,
     changeMembershipStatus,
     getMembershipInfo,
+    getMembershipByStatus,
+    getMembershipById,
 };

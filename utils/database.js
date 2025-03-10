@@ -31,13 +31,12 @@ class databaseConnection {
             if (!process.env.MONGODB_URL) {
                 throw new Error('MONGO_URL not found in .env file');
             }
+            console.log('tring to connect with mongodb....');
 
             const connectionOptions = {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-                maxPoolSize: 4,
-                serverSelectionTimeoutMS: 5000,
-                socketTimeoutMS: 45000,
+                // maxPoolSize: 4,
+                // serverSelectionTimeoutMS: 5000,
+                // socketTimeoutMS: 45000,
             };
 
             if (process.env.NODE_ENV === 'development') {
