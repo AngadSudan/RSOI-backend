@@ -109,3 +109,5 @@ ConnectDB()
         console.log('Error occured: ', error);
         process.exit(1);
     });
+
+export { app as default };
