@@ -85,8 +85,6 @@ app.get('/', (req, res) => {
         environment: process.env.NODE_ENV,
         memory: process.memoryUsage(),
         uptime: process.uptime(),
-        dbStatus:
-            mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
         FRONTEND_URL: process.env.FRONTEND_URL,
     });
 });
