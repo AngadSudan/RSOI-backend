@@ -1,6 +1,6 @@
 import { ApiError, ApiResponse } from '../utils/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import keyManager from '../utils/Gemini.js';
+import keyManager from '../utils/gemini.js';
 
 const getSupport = async (req, res) => {
     try {
