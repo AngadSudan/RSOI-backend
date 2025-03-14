@@ -349,7 +349,16 @@ const changeMembershipStatus = async (req, res) => {
 
         const dbMembership = await Membership.findById(membershipId);
         if (!dbMembership) throw new Error('no such membership found');
-        if (!['approved', 'payment', 'member'].includes(status))
+        console.log(status);
+        if (
+            ![
+                'approved',
+                'incomplete',
+                'pending',
+                'payment',
+                'member',
+            ].includes(status)
+        )
             throw new Error('invalid status provided');
 
         let reasonForRejection = dbMembership.reasonForRejection;

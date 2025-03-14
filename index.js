@@ -76,10 +76,18 @@ app.use('/api/v1/review', reviewRouter);
 app.use('/api/v1/membership', membershipRouter);
 app.use('/api/v1/announcement', announcementRouter);
 
-app.get('/health', (req, res) => {
+app.get('/', (req, res) => {
     res.status(200).json({
-        status: 200,
-        message: 'Server is running',
+        success: true,
+        message: 'Welcome to the Backend of the job portal application API ',
+        version: '1.0.0',
+        timestamp: new Date(),
+        environment: process.env.NODE_ENV,
+        memory: process.memoryUsage(),
+        uptime: process.uptime(),
+        dbStatus:
+            mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        FRONTEND_URL: process.env.FRONTEND_URL,
     });
 });
 app.use((req, res) => {
